@@ -1,1 +1,197 @@
-......
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <limits>
+using namespace std;
+
+const int DEPARTMENT_COUNT = 4;
+const int ROOM_COUNT = 5;
+const int LOCATION_COUNT = 6;
+const int INF = 99999;
+
+string departmentNames[DEPARTMENT_COUNT] = {
+    "General Medicine",
+    "Cardiology",
+    "Neurology",
+    "Orthopedics"
+};
+
+string locationNames[LOCATION_COUNT] = {
+    "Emergency",
+    "General Medicine",
+    "Cardiology",
+    "Neurology",
+    "Orthopedics",
+    "Laboratory"
+};
+
+class Patient {
+public:
+    int id;
+    string name;
+    int age;
+    int priority;
+    int arrivalNumber;
+    int arrivalTime;
+    int treatmentTime;
+    int dischargeTime;
+    int department;
+    int roomNumber;
+    string status;
+    Patient* nextRecord;
+};
+
+class BSTNode {
+public:
+    Patient* patient;
+    BSTNode* left;
+    BSTNode* right;
+};
+
+class QueueNode {
+public:
+    Patient* patient;
+    QueueNode* next;
+};
+
+class DepartmentQueue {
+public:
+    QueueNode* front;
+    QueueNode* rear;
+};
+
+class StackNode {
+public:
+    int patientID;
+    string action;
+    int oldPriority;
+    int newPriority;
+    StackNode* next;
+};
+
+class RoomQueue {
+public:
+    int rooms[ROOM_COUNT];
+    int front;
+    int rear;
+    int count;
+};
+
+Patient* recordsHead = NULL;
+BSTNode* bstRoot = NULL;
+Patient** triageHeap = NULL;
+int heapSize = 0;
+int heapCapacity = 5;
+DepartmentQueue departmentQueues[DEPARTMENT_COUNT];
+StackNode* historyTop = NULL;
+RoomQueue roomQueue;
+int arrivalCounter = 1;
+int systemTime = 0;
+
+int readInt(string message, int low, int high) {
+    int value;
+
+    while (true) {
+        cout << message;
+        cin >> value;
+
+        if (!cin.fail() && value >= low && value <= high) {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            return value;
+        }
+
+        cout << "Invalid input. Enter a number between " << low << " and " << high << ".\n";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+}
+
+string readLine(string message) {
+    string value;
+
+    while (true) {
+        cout << message;
+        getline(cin, value);
+
+        if (!value.empty())
+            return value;
+
+        cout << "Input cannot be empty.\n";
+    }
+}
+
+string priorityName(int priority) {
+    if (priority == 1) return "Critical";
+    if (priority == 2) return "Emergency";
+    if (priority == 3) return "Urgent";
+    if (priority == 4) return "Less Urgent";
+    return "Non-Urgent";
+}
+
+string departmentName(int department) {
+    if (department >= 0 && department < DEPARTMENT_COUNT)
+        return departmentNames[department];
+
+    return "Unknown";
+}
+
+Patient* searchPatient(int id);
+void saveData();
+
+void initializeDepartments() {
+    for (int i = 0; i < DEPARTMENT_COUNT; i++) {
+        departmentQueues[i].front = NULL;
+        departmentQueues[i].rear = NULL;
+    }
+}
+
+void initializeHeap() {
+    triageHeap = new Patient*[heapCapacity];
+    heapSize = 0;
+}
+
+void initializeRooms() {
+    roomQueue.front = 0;
+    roomQueue.rear = ROOM_COUNT - 1;
+    roomQueue.count = ROOM_COUNT;
+
+    for (int i = 0; i < ROOM_COUNT; i++)
+        roomQueue.rooms[i] = i + 1;
+}
+
+void pushHistory(int id, string action, int oldPriority = -1, int newPriority = -1) {
+    StackNode* node = new StackNode;
+
+    node->patientID = id;
+    node->action = action;
+    node->oldPriority = oldPriority;
+    node->newPriority = newPriority;
+    node->next = historyTop;
+
+    historyTop = node;
+}
+
+void displayHistory() {
+    if (historyTop == NULL) {
+        cout << "\nNo action history available.\n";
+        return;
+    }
+
+    StackNode* current = historyTop;
+
+    cout << "\n========== ACTION HISTORY ==========\n";
+
+    while (current != NULL) {
+        cout << "Action: " << current->action << "\n";
+        cout << "Patient ID: " << current->patientID << "\n";
+
+        if (current->action == "Priority Updated") {
+            cout << "Old Priority: " << priorityName(current->oldPriority) << "\n";
+            cout << "New Priority: " << priorityName(current->newPriority) << "\n";
+        }
+
+        cout << "--------------------------\n";
+        current = current->next;
+    }
+}
