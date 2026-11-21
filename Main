@@ -528,5 +528,291 @@ void displayPatient(Patient* patient) {
 
     cout << "\n";
 }
+void registerPatient() {
+    int id = readInt("\nEnter Patient ID: ", 1, 999999);
+
+    if (searchPatient(id) != NULL) {
+        cout << "Patient ID already exists.\n";
+        return;
+    }
+
+    string name = readLine("Enter Patient Name: ");
+    int age = readInt("Enter Patient Age: ", 1, 120);
+
+    cout << "\n1. Critical\n";
+    cout << "2. Emergency\n";
+    cout << "3. Urgent\n";
+    cout << "4. Less Urgent\n";
+    cout << "5. Non-Urgent\n";
+
+    int priority = readInt("Select Priority: ", 1, 5);
+
+    cout << "\nSelect Department:\n";
+
+    for (int i = 0; i < DEPARTMENT_COUNT; i++)
+        cout << i + 1 << ". " << departmentNames[i] << "\n";
+
+    int department = readInt("Enter Department: ", 1, DEPARTMENT_COUNT) - 1;
+
+    Patient* patient = new Patient;
+
+    patient->id = id;
+    patient->name = name;
+    patient->age = age;
+    patient->priority = priority;
+    patient->arrivalNumber = arrivalCounter++;
+    patient->arrivalTime = systemTime++;
+    patient->treatmentTime = -1;
+    patient->dischargeTime = -1;
+    patient->department = department;
+    patient->roomNumber = -1;
+    patient->status = "Waiting for Triage";
+    patient->nextRecord = NULL;
+
+    addRecord(patient);
+    insertHeap(patient);
+    pushHistory(id, "Patient Registered");
+    saveData();
+
+    cout << "\nPatient registered successfully.\n";
+}
+
+void displayAllPatients() {
+    if (recordsHead == NULL) {
+        cout << "\nNo patient records found.\n";
+        return;
+    }
+
+    Patient* current = recordsHead;
+
+    cout << "\n========== ALL PATIENTS ==========\n";
+
+    while (current != NULL) {
+        displayPatient(current);
+        current = current->nextRecord;
+    }
+}
+
+void displayTriageHeap() {
+    if (heapSize == 0) {
+        cout << "\nNo patients waiting for triage.\n";
+        return;
+    }
+
+    cout << "\n========== EMERGENCY PRIORITY HEAP ==========\n";
+
+    for (int i = 0; i < heapSize; i++) {
+        cout << "\nHeap Position " << i + 1 << ":";
+        displayPatient(triageHeap[i]);
+    }
+}
+
+void callNextPatient() {
+    Patient* patient = extractHeap();
+
+    if (patient == NULL) {
+        cout << "\nNo patients are waiting for triage.\n";
+        return;
+    }
+
+    patient->status = "Waiting for Department";
+    enqueueDepartment(patient->department, patient);
+    pushHistory(patient->id, "Patient Sent to Department");
+    saveData();
+
+    cout << "\nPatient moved to department queue.\n";
+    displayPatient(patient);
+}
+
+void updatePriority() {
+    int id = readInt("\nEnter Patient ID: ", 1, 999999);
+    Patient* patient = searchPatient(id);
+
+    if (patient == NULL) {
+        cout << "Patient not found.\n";
+        return;
+    }
+
+    if (patient->status != "Waiting for Triage") {
+        cout << "Only patients waiting for triage can change priority.\n";
+        return;
+    }
+
+    int newPriority = readInt("Enter New Priority (1-5): ", 1, 5);
+    int oldPriority = patient->priority;
+
+    if (newPriority == oldPriority) {
+        cout << "Priority is already set to this level.\n";
+        return;
+    }
+
+    patient->priority = newPriority;
+    rebuildHeap();
+    pushHistory(id, "Priority Updated", oldPriority, newPriority);
+    saveData();
+
+    cout << "Priority updated successfully.\n";
+}
+
+void undoPriorityUpdate() {
+    if (historyTop == NULL) {
+        cout << "\nNo action available to undo.\n";
+        return;
+    }
+
+    StackNode* current = historyTop;
+
+    while (current != NULL && current->action != "Priority Updated")
+        current = current->next;
+
+    if (current == NULL) {
+        cout << "\nNo priority update available to undo.\n";
+        return;
+    }
+
+    Patient* patient = searchPatient(current->patientID);
+
+    if (patient == NULL || patient->status != "Waiting for Triage") {
+        cout << "\nThe priority update can no longer be undone.\n";
+        return;
+    }
+
+    patient->priority = current->oldPriority;
+    rebuildHeap();
+
+    StackNode* previous = NULL;
+    StackNode* node = historyTop;
+
+    while (node != current) {
+        previous = node;
+        node = node->next;
+    }
+
+    if (previous == NULL)
+        historyTop = current->next;
+    else
+        previous->next = current->next;
+
+    delete current;
+
+    pushHistory(patient->id, "Priority Update Undone");
+    saveData();
+
+    cout << "\nPriority update undone successfully.\n";
+}
+
+void searchByID() {
+    int id = readInt("\nEnter Patient ID: ", 1, 999999);
+    Patient* patient = searchPatient(id);
+
+    if (patient == NULL)
+        cout << "\nPatient not found.\n";
+    else
+        displayPatient(patient);
+}
+
+string lowerText(string text) {
+    for (int i = 0; i < (int)text.length(); i++) {
+        if (text[i] >= 'A' && text[i] <= 'Z')
+            text[i] = char(text[i] + 32);
+    }
+
+    return text;
+}
+
+void searchByName() {
+    string name = readLine("\nEnter patient name or part of name: ");
+    string target = lowerText(name);
+    Patient* current = recordsHead;
+    bool found = false;
+
+    while (current != NULL) {
+        if (lowerText(current->name).find(target) != string::npos) {
+            displayPatient(current);
+            found = true;
+        }
+
+        current = current->nextRecord;
+    }
+
+    if (!found)
+        cout << "\nNo matching patient found.\n";
+}
+
+void editPatient() {
+    int id = readInt("\nEnter Patient ID: ", 1, 999999);
+    Patient* patient = searchPatient(id);
+
+    if (patient == NULL) {
+        cout << "Patient not found.\n";
+        return;
+    }
+
+    cout << "\n1. Edit Name\n";
+    cout << "2. Edit Age\n";
+    cout << "3. Change Department\n";
+
+    int choice = readInt("Enter Choice: ", 1, 3);
+
+    if (choice == 1) {
+        patient->name = readLine("Enter New Name: ");
+    }
+    else if (choice == 2) {
+        patient->age = readInt("Enter New Age: ", 1, 120);
+    }
+    else {
+        if (patient->status != "Waiting for Triage") {
+            cout << "Department can only be changed before triage.\n";
+            return;
+        }
+
+        for (int i = 0; i < DEPARTMENT_COUNT; i++)
+            cout << i + 1 << ". " << departmentNames[i] << "\n";
+
+        patient->department = readInt("Enter Department: ", 1, DEPARTMENT_COUNT) - 1;
+    }
+
+    pushHistory(id, "Patient Record Edited");
+    saveData();
+
+    cout << "\nPatient record updated successfully.\n";
+}
+
+void deletePatient() {
+    int id = readInt("\nEnter Patient ID: ", 1, 999999);
+    Patient* patient = searchPatient(id);
+
+    if (patient == NULL) {
+        cout << "Patient not found.\n";
+        return;
+    }
+
+    if (patient->status != "Discharged") {
+        cout << "Only discharged patients can be deleted.\n";
+        return;
+    }
+
+    Patient* current = recordsHead;
+    Patient* previous = NULL;
+
+    while (current != NULL && current != patient) {
+        previous = current;
+        current = current->nextRecord;
+    }
+
+    if (previous == NULL)
+        recordsHead = current->nextRecord;
+    else
+        previous->nextRecord = current->nextRecord;
+
+    bstRoot = deleteBST(bstRoot, id);
+
+    delete patient;
+
+    pushHistory(id, "Patient Record Deleted");
+    saveData();
+
+    cout << "\nPatient record deleted successfully.\n";
+}
 
 
