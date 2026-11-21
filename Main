@@ -196,3 +196,213 @@ void displayHistory() {
         current = current->next;
     }
 }
+void insertBST(Patient* patient) {
+    BSTNode* node = new BSTNode;
+
+    node->patient = patient;
+    node->left = NULL;
+    node->right = NULL;
+
+    if (bstRoot == NULL) {
+        bstRoot = node;
+        return;
+    }
+
+    BSTNode* current = bstRoot;
+    BSTNode* parent = NULL;
+
+    while (current != NULL) {
+        parent = current;
+
+        if (patient->id < current->patient->id)
+            current = current->left;
+        else
+            current = current->right;
+    }
+
+    if (patient->id < parent->patient->id)
+        parent->left = node;
+    else
+        parent->right = node;
+}
+
+Patient* searchBST(int id) {
+    BSTNode* current = bstRoot;
+
+    while (current != NULL) {
+        if (current->patient->id == id)
+            return current->patient;
+
+        if (id < current->patient->id)
+            current = current->left;
+        else
+            current = current->right;
+    }
+
+    return NULL;
+}
+
+Patient* searchPatient(int id) {
+    return searchBST(id);
+}
+
+BSTNode* minimumBST(BSTNode* root) {
+    BSTNode* current = root;
+
+    while (current != NULL && current->left != NULL)
+        current = current->left;
+
+    return current;
+}
+
+BSTNode* deleteBST(BSTNode* root, int id) {
+    if (root == NULL)
+        return NULL;
+
+    if (id < root->patient->id) {
+        root->left = deleteBST(root->left, id);
+    }
+    else if (id > root->patient->id) {
+        root->right = deleteBST(root->right, id);
+    }
+    else {
+        if (root->left == NULL) {
+            BSTNode* temp = root->right;
+            delete root;
+            return temp;
+        }
+
+        if (root->right == NULL) {
+            BSTNode* temp = root->left;
+            delete root;
+            return temp;
+        }
+
+        BSTNode* successor = minimumBST(root->right);
+        root->patient = successor->patient;
+        root->right = deleteBST(root->right, successor->patient->id);
+    }
+
+    return root;
+}
+
+void displayBSTInOrder(BSTNode* root) {
+    if (root == NULL)
+        return;
+
+    displayBSTInOrder(root->left);
+    cout << root->patient->id << " - " << root->patient->name << "\n";
+    displayBSTInOrder(root->right);
+}
+
+void addRecord(Patient* patient) {
+    if (recordsHead == NULL) {
+        recordsHead = patient;
+    }
+    else {
+        Patient* current = recordsHead;
+
+        while (current->nextRecord != NULL)
+            current = current->nextRecord;
+
+        current->nextRecord = patient;
+    }
+
+    insertBST(patient);
+}
+
+bool higherPriority(Patient* a, Patient* b) {
+    if (a->priority != b->priority)
+        return a->priority < b->priority;
+
+    return a->arrivalNumber < b->arrivalNumber;
+}
+
+void swapHeapPatients(Patient*& a, Patient*& b) {
+    Patient* temp = a;
+    a = b;
+    b = temp;
+}
+
+void resizeHeap() {
+    heapCapacity *= 2;
+
+    Patient** newHeap = new Patient*[heapCapacity];
+
+    for (int i = 0; i < heapSize; i++)
+        newHeap[i] = triageHeap[i];
+
+    delete[] triageHeap;
+    triageHeap = newHeap;
+}
+
+void heapifyUp(int index) {
+    while (index > 0) {
+        int parent = (index - 1) / 2;
+
+        if (higherPriority(triageHeap[index], triageHeap[parent])) {
+            swapHeapPatients(triageHeap[index], triageHeap[parent]);
+            index = parent;
+        }
+        else {
+            break;
+        }
+    }
+}
+
+void heapifyDown(int index) {
+    while (true) {
+        int left = 2 * index + 1;
+        int right = 2 * index + 2;
+        int best = index;
+
+        if (left < heapSize && higherPriority(triageHeap[left], triageHeap[best]))
+            best = left;
+
+        if (right < heapSize && higherPriority(triageHeap[right], triageHeap[best]))
+            best = right;
+
+        if (best == index)
+            break;
+
+        swapHeapPatients(triageHeap[index], triageHeap[best]);
+        index = best;
+    }
+}
+
+void insertHeap(Patient* patient) {
+    if (heapSize == heapCapacity)
+        resizeHeap();
+
+    triageHeap[heapSize] = patient;
+    heapifyUp(heapSize);
+    heapSize++;
+}
+
+Patient* extractHeap() {
+    if (heapSize == 0)
+        return NULL;
+
+    Patient* patient = triageHeap[0];
+    heapSize--;
+
+    if (heapSize > 0) {
+        triageHeap[0] = triageHeap[heapSize];
+        heapifyDown(0);
+    }
+
+    return patient;
+}
+
+void rebuildHeap() {
+    heapSize = 0;
+
+    Patient* current = recordsHead;
+
+    while (current != NULL) {
+        if (current->status == "Waiting for Triage")
+            insertHeap(current);
+
+        current = current->nextRecord;
+    }
+}
