@@ -406,3 +406,127 @@ void rebuildHeap() {
         current = current->nextRecord;
     }
 }
+void enqueueDepartment(int department, Patient* patient) {
+    QueueNode* node = new QueueNode;
+
+    node->patient = patient;
+    node->next = NULL;
+
+    if (departmentQueues[department].rear == NULL) {
+        departmentQueues[department].front = node;
+        departmentQueues[department].rear = node;
+    }
+    else {
+        departmentQueues[department].rear->next = node;
+        departmentQueues[department].rear = node;
+    }
+}
+
+Patient* dequeueDepartment(int department) {
+    if (departmentQueues[department].front == NULL)
+        return NULL;
+
+    QueueNode* temp = departmentQueues[department].front;
+    Patient* patient = temp->patient;
+
+    departmentQueues[department].front = temp->next;
+
+    if (departmentQueues[department].front == NULL)
+        departmentQueues[department].rear = NULL;
+
+    delete temp;
+    return patient;
+}
+
+void clearDepartmentQueues() {
+    for (int i = 0; i < DEPARTMENT_COUNT; i++) {
+        while (departmentQueues[i].front != NULL) {
+            QueueNode* temp = departmentQueues[i].front;
+            departmentQueues[i].front = temp->next;
+            delete temp;
+        }
+
+        departmentQueues[i].rear = NULL;
+    }
+}
+
+bool roomQueueEmpty() {
+    return roomQueue.count == 0;
+}
+
+bool roomQueueFull() {
+    return roomQueue.count == ROOM_COUNT;
+}
+
+int allocateRoom() {
+    if (roomQueueEmpty())
+        return -1;
+
+    int room = roomQueue.rooms[roomQueue.front];
+    roomQueue.front = (roomQueue.front + 1) % ROOM_COUNT;
+    roomQueue.count--;
+
+    return room;
+}
+
+void releaseRoom(int room) {
+    if (room < 1 || room > ROOM_COUNT || roomQueueFull())
+        return;
+
+    roomQueue.rear = (roomQueue.rear + 1) % ROOM_COUNT;
+    roomQueue.rooms[roomQueue.rear] = room;
+    roomQueue.count++;
+}
+
+void rebuildRoomQueue() {
+    bool occupied[ROOM_COUNT + 1] = {false};
+
+    Patient* current = recordsHead;
+
+    while (current != NULL) {
+        if (current->roomNumber >= 1 && current->roomNumber <= ROOM_COUNT &&
+            current->status == "Under Treatment")
+            occupied[current->roomNumber] = true;
+
+        current = current->nextRecord;
+    }
+
+    roomQueue.front = 0;
+    roomQueue.rear = -1;
+    roomQueue.count = 0;
+
+    for (int room = 1; room <= ROOM_COUNT; room++) {
+        if (!occupied[room]) {
+            roomQueue.rear = (roomQueue.rear + 1) % ROOM_COUNT;
+            roomQueue.rooms[roomQueue.rear] = room;
+            roomQueue.count++;
+        }
+    }
+}
+
+void displayPatient(Patient* patient) {
+    if (patient == NULL)
+        return;
+
+    cout << "\nID: " << patient->id;
+    cout << "\nName: " << patient->name;
+    cout << "\nAge: " << patient->age;
+    cout << "\nPriority: " << patient->priority << " (" << priorityName(patient->priority) << ")";
+    cout << "\nDepartment: " << departmentName(patient->department);
+    cout << "\nStatus: " << patient->status;
+    cout << "\nArrival Number: " << patient->arrivalNumber;
+    cout << "\nArrival Time: " << patient->arrivalTime;
+
+    if (patient->treatmentTime != -1)
+        cout << "\nTreatment Time: " << patient->treatmentTime;
+
+    if (patient->dischargeTime != -1)
+        cout << "\nDischarge Time: " << patient->dischargeTime;
+
+    if (patient->roomNumber != -1)
+        cout << "\nRoom Number: " << patient->roomNumber;
+
+    cout << "\n";
+}
+
+
