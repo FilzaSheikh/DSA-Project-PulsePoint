@@ -814,5 +814,186 @@ void deletePatient() {
 
     cout << "\nPatient record deleted successfully.\n";
 }
+void displayDepartmentQueues() {
+    cout << "\n========== DEPARTMENT QUEUES ==========\n";
+
+    for (int i = 0; i < DEPARTMENT_COUNT; i++) {
+        cout << "\n" << departmentNames[i] << ":\n";
+
+        QueueNode* current = departmentQueues[i].front;
+
+        if (current == NULL) {
+            cout << "No patients waiting.\n";
+            continue;
+        }
+
+        while (current != NULL) {
+            cout << "ID: " << current->patient->id
+                 << " | Name: " << current->patient->name << "\n";
+            current = current->next;
+        }
+    }
+}
+
+void serveDepartmentPatient() {
+    cout << "\nSelect Department:\n";
+
+    for (int i = 0; i < DEPARTMENT_COUNT; i++)
+        cout << i + 1 << ". " << departmentNames[i] << "\n";
+
+    int department = readInt("Enter Department: ", 1, DEPARTMENT_COUNT) - 1;
+
+    if (roomQueueEmpty()) {
+        cout << "\nAll treatment rooms are currently occupied.\n";
+        return;
+    }
+
+    Patient* patient = dequeueDepartment(department);
+
+    if (patient == NULL) {
+        cout << "\nNo patients waiting in this department.\n";
+        return;
+    }
+
+    int room = allocateRoom();
+
+    patient->roomNumber = room;
+    patient->status = "Under Treatment";
+    patient->treatmentTime = systemTime++;
+
+    pushHistory(patient->id, "Treatment Started");
+    saveData();
+
+    cout << "\nPatient assigned to Room " << room << ".\n";
+    displayPatient(patient);
+}
+
+void dischargePatient() {
+    int id = readInt("\nEnter Patient ID: ", 1, 999999);
+    Patient* patient = searchPatient(id);
+
+    if (patient == NULL) {
+        cout << "Patient not found.\n";
+        return;
+    }
+
+    if (patient->status != "Under Treatment") {
+        cout << "Patient must be under treatment before discharge.\n";
+        return;
+    }
+
+    int room = patient->roomNumber;
+
+    patient->roomNumber = -1;
+    patient->status = "Discharged";
+    patient->dischargeTime = systemTime++;
+
+    releaseRoom(room);
+    pushHistory(id, "Patient Discharged");
+    saveData();
+
+    cout << "\nPatient discharged successfully.\n";
+    cout << "Room " << room << " is now available.\n";
+}
+
+void displayRooms() {
+    cout << "\n========== TREATMENT ROOMS ==========\n";
+
+    cout << "Available Rooms: ";
+
+    if (roomQueueEmpty()) {
+        cout << "None";
+    }
+    else {
+        for (int i = 0; i < roomQueue.count; i++) {
+            int index = (roomQueue.front + i) % ROOM_COUNT;
+            cout << roomQueue.rooms[index] << " ";
+        }
+    }
+
+    cout << "\n\nOccupied Rooms:\n";
+
+    bool found = false;
+    Patient* current = recordsHead;
+
+    while (current != NULL) {
+        if (current->roomNumber != -1) {
+            cout << "Room " << current->roomNumber
+                 << " - " << current->name << "\n";
+            found = true;
+        }
+
+        current = current->nextRecord;
+    }
+
+    if (!found)
+        cout << "No occupied rooms.\n";
+}
+
+void displayBST() {
+    if (bstRoot == NULL) {
+        cout << "\nPatient ID BST is empty.\n";
+        return;
+    }
+
+    cout << "\n========== PATIENT ID BST ==========\n";
+    displayBSTInOrder(bstRoot);
+}
+
+void insertionSortByAge(Patient** array, int count, long long& comparisons) {
+    for (int i = 1; i < count; i++) {
+        Patient* key = array[i];
+        int j = i - 1;
+
+        while (j >= 0) {
+            comparisons++;
+
+            if (array[j]->age > key->age) {
+                array[j + 1] = array[j];
+                j--;
+            }
+            else {
+                break;
+            }
+        }
+
+        array[j + 1] = key;
+    }
+}
+
+void mergePatients(Patient** array, Patient** temp, int left, int mid, int right, long long& comparisons) {
+    int i = left;
+    int j = mid + 1;
+    int k = left;
+
+    while (i <= mid && j <= right) {
+        comparisons++;
+
+        if (array[i]->id <= array[j]->id)
+            temp[k++] = array[i++];
+        else
+            temp[k++] = array[j++];
+    }
+
+    while (i <= mid)
+        temp[k++] = array[i++];
+
+    while (j <= right)
+        temp[k++] = array[j++];
+
+    for (int x = left; x <= right; x++)
+        array[x] = temp[x];
+}
+
+void mergeSortByID(Patient** array, Patient** temp, int left, int right, long long& comparisons) {
+    if (left >= right)
+        return;
+
+    int mid = left + (right - left) / 2;
+
+    mergeSortByID(array, temp, left, mid, comparisons);
+    mergeSortByID(array, temp, mid + 1, right, comparisons);
+    mergePatients(array, temp, left, mid, right, comparisons);
+}
 
 
