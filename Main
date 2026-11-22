@@ -995,5 +995,172 @@ void mergeSortByID(Patient** array, Patient** temp, int left, int right, long lo
     mergeSortByID(array, temp, mid + 1, right, comparisons);
     mergePatients(array, temp, left, mid, right, comparisons);
 }
+void sortingMenu() {
+    int count = 0;
+    Patient* current = recordsHead;
 
+    while (current != NULL) {
+        count++;
+        current = current->nextRecord;
+    }
+
+    if (count == 0) {
+        cout << "\nNo records to sort.\n";
+        return;
+    }
+
+    Patient** array = new Patient*[count];
+    current = recordsHead;
+
+    for (int i = 0; i < count; i++) {
+        array[i] = current;
+        current = current->nextRecord;
+    }
+
+    cout << "\n1. Insertion Sort by Age\n";
+    cout << "2. Merge Sort by Patient ID\n";
+
+    int choice = readInt("Enter Choice: ", 1, 2);
+    long long comparisons = 0;
+
+    if (choice == 1) {
+        insertionSortByAge(array, count, comparisons);
+        cout << "\n========== SORTED BY AGE ==========\n";
+    }
+    else {
+        Patient** temp = new Patient*[count];
+        mergeSortByID(array, temp, 0, count - 1, comparisons);
+        delete[] temp;
+        cout << "\n========== SORTED BY PATIENT ID ==========\n";
+    }
+
+    for (int i = 0; i < count; i++)
+        displayPatient(array[i]);
+
+    cout << "Number of comparisons: " << comparisons << "\n";
+
+    delete[] array;
+}
+
+void displayStatistics() {
+    int total = 0;
+    int triage = 0;
+    int departmentWaiting = 0;
+    int treatment = 0;
+    int discharged = 0;
+
+    Patient* current = recordsHead;
+
+    while (current != NULL) {
+        total++;
+
+        if (current->status == "Waiting for Triage")
+            triage++;
+        else if (current->status == "Waiting for Department")
+            departmentWaiting++;
+        else if (current->status == "Under Treatment")
+            treatment++;
+        else if (current->status == "Discharged")
+            discharged++;
+
+        current = current->nextRecord;
+    }
+
+    cout << "\n========== PULSEPOINT STATISTICS ==========\n";
+    cout << "Total Registered Patients: " << total << "\n";
+    cout << "Waiting for Triage: " << triage << "\n";
+    cout << "Waiting for Department: " << departmentWaiting << "\n";
+    cout << "Under Treatment: " << treatment << "\n";
+    cout << "Discharged: " << discharged << "\n";
+    cout << "Available Treatment Rooms: " << roomQueue.count << "\n";
+
+    cout << "\nDepartment Counts:\n";
+
+    for (int i = 0; i < DEPARTMENT_COUNT; i++) {
+        int count = 0;
+        current = recordsHead;
+
+        while (current != NULL) {
+            if (current->department == i)
+                count++;
+
+            current = current->nextRecord;
+        }
+
+        cout << departmentNames[i] << ": " << count << "\n";
+    }
+}
+
+void findHospitalRoute() {
+    int graph[LOCATION_COUNT][LOCATION_COUNT] = {
+        {0, 4, 3, 7, 6, 5},
+        {4, 0, 4, INF, 5, 3},
+        {3, 4, 0, 2, INF, 4},
+        {7, INF, 2, 0, 3, 5},
+        {6, 5, INF, 3, 0, 4},
+        {5, 3, 4, 5, 4, 0}
+    };
+
+    cout << "\n========== HOSPITAL LOCATIONS ==========\n";
+
+    for (int i = 1; i < LOCATION_COUNT; i++)
+        cout << i << ". " << locationNames[i] << "\n";
+
+    int destination = readInt("Select Destination: ", 1, LOCATION_COUNT - 1);
+
+    int distance[LOCATION_COUNT];
+    int previous[LOCATION_COUNT];
+    bool visited[LOCATION_COUNT] = {false};
+
+    for (int i = 0; i < LOCATION_COUNT; i++) {
+        distance[i] = INF;
+        previous[i] = -1;
+    }
+
+    distance[0] = 0;
+
+    for (int count = 0; count < LOCATION_COUNT; count++) {
+        int current = -1;
+
+        for (int i = 0; i < LOCATION_COUNT; i++) {
+            if (!visited[i] &&
+                (current == -1 || distance[i] < distance[current]))
+                current = i;
+        }
+
+        if (current == -1 || distance[current] == INF)
+            break;
+
+        visited[current] = true;
+
+        for (int i = 0; i < LOCATION_COUNT; i++) {
+            if (!visited[i] &&
+                graph[current][i] != INF &&
+                distance[current] + graph[current][i] < distance[i]) {
+                distance[i] = distance[current] + graph[current][i];
+                previous[i] = current;
+            }
+        }
+    }
+
+    int path[LOCATION_COUNT];
+    int pathSize = 0;
+    int current = destination;
+
+    while (current != -1) {
+        path[pathSize++] = current;
+        current = previous[current];
+    }
+
+    cout << "\nShortest Route:\n";
+
+    for (int i = pathSize - 1; i >= 0; i--) {
+        cout << locationNames[path[i]];
+
+        if (i > 0)
+            cout << " -> ";
+    }
+
+    cout << "\nTotal Distance: " << distance[destination] << " units\n";
+}
 
