@@ -1308,5 +1308,112 @@ void finalCleanup() {
         delete temp;
     }
 }
+void displayMenu() {
+    cout << "\n\n========== PULSEPOINT ==========" << "\n";
+    cout << "1. Register Patient\n";
+    cout << "2. View All Patients\n";
+    cout << "3. View Emergency Priority Heap\n";
+    cout << "4. Call Next Patient\n";
+    cout << "5. Update Patient Priority\n";
+    cout << "6. Undo Priority Update\n";
+    cout << "7. Search Patient by ID\n";
+    cout << "8. Search Patient by Name\n";
+    cout << "9. Edit Patient Record\n";
+    cout << "10. Delete Patient Record\n";
+    cout << "11. View Department Queues\n";
+    cout << "12. Serve Next Department Patient\n";
+    cout << "13. Discharge Patient\n";
+    cout << "14. View Treatment Rooms\n";
+    cout << "15. View Patient ID BST\n";
+    cout << "16. Sort Patient Records\n";
+    cout << "17. View Statistics\n";
+    cout << "18. Find Shortest Hospital Route\n";
+    cout << "19. View Action History\n";
+    cout << "20. Save Records\n";
+    cout << "21. Exit\n";
+}
 
+int main() {
+    initializeDepartments();
+    initializeHeap();
+    initializeRooms();
+    loadData();
+
+    int choice;
+
+    do {
+        displayMenu();
+        choice = readInt("\nEnter your choice: ", 1, 21);
+
+        switch (choice) {
+            case 1:
+                registerPatient();
+                break;
+            case 2:
+                displayAllPatients();
+                break;
+            case 3:
+                displayTriageHeap();
+                break;
+            case 4:
+                callNextPatient();
+                break;
+            case 5:
+                updatePriority();
+                break;
+            case 6:
+                undoPriorityUpdate();
+                break;
+            case 7:
+                searchByID();
+                break;
+            case 8:
+                searchByName();
+                break;
+            case 9:
+                editPatient();
+                break;
+            case 10:
+                deletePatient();
+                break;
+            case 11:
+                displayDepartmentQueues();
+                break;
+            case 12:
+                serveDepartmentPatient();
+                break;
+            case 13:
+                dischargePatient();
+                break;
+            case 14:
+                displayRooms();
+                break;
+            case 15:
+                displayBST();
+                break;
+            case 16:
+                sortingMenu();
+                break;
+            case 17:
+                displayStatistics();
+                break;
+            case 18:
+                findHospitalRoute();
+                break;
+            case 19:
+                displayHistory();
+                break;
+            case 20:
+                saveData();
+                cout << "\nRecords saved successfully.\n";
+                break;
+            case 21:
+                finalCleanup();
+                cout << "\nThank you for using PulsePoint!\n";
+                break;
+        }
+    } while (choice != 21);
+
+    return 0;
+}
 
